@@ -17,6 +17,7 @@ import ProductFormPage from '../pages/provider/ProductFormPage';
 // Public Pages
 import ProductsSearchPage from '../pages/ProductsSearchPage';
 import ProductDetailPage from '../pages/ProductDetailPage';
+import CartPage from '../pages/CartPage';
 
 export const routes: RouteObject[] = [
   {
@@ -48,6 +49,15 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      // Cart Management
+      {
+        path: 'cart',
+        element: (
+          <ProtectedRoute>
+            <CartPage />
           </ProtectedRoute>
         ),
       },

@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useGetProductByIdQuery, IProviderInfo } from '../api/productApi';
+import {
+  useGetCartQuery,
+  useAddToCartMutation,
+  useRemoveFromCartMutation,
+} from '../api/cartApi';
+import { useAppSelector } from '../hooks/storeHooks';
 import { CATEGORY_LABELS, ProductCategory } from '../constants/categories';
 import { generateProductSlug } from '../utils/slug';
 import {
@@ -16,7 +22,7 @@ import {
   Phone,
   ArrowLeft,
   RefreshCw,
-  ShoppingBagIcon,
+  Trash2,
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import Spinner from '../components/common/Spinner';
@@ -51,7 +57,10 @@ const ProductDetailPage: React.FC = () => {
   const { slug, id } = useParams<{ slug: string; id: string }>();
   const navigate = useNavigate();
 
-  // 1. RTK Query: fetch product details
+  // 1. Auth status selector
+  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
+
+  // 2. RTK Query: fetch product details
   const {
     data: product,
     isLoading,
@@ -61,6 +70,15 @@ const ProductDetailPage: React.FC = () => {
     skip: !id,
     refetchOnMountOrArgChange: true,
   });
+
+  // 3. RTK Query: fetch active customer cart
+  const isCustomer = isAuthenticated && user?.role === 'CUSTOMER';
+  const { data: cart } = useGetCartQuery(undefined, {
+    skip: !isCustomer,
+  });
+
+  const [addToCart] = useAddToCartMutation();
+  const [removeFromCart] = useRemoveFromCartMutation();
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({});
@@ -75,7 +93,11 @@ const ProductDetailPage: React.FC = () => {
   const isOutOfStock = stock === 0;
   const isLowStock = stock > 0 && stock < 10;
 
-  // 2. Canonical SEO Slug Redirect check
+  // Check if product is already in active customer cart
+  const cartItem = cart?.items.find((item) => item.product._id === id);
+  const isAlreadyInCart = !!cartItem;
+
+  // 4. Canonical SEO Slug Redirect check
   useEffect(() => {
     if (product) {
       const correctSlug = generateProductSlug(product.title);
@@ -85,7 +107,7 @@ const ProductDetailPage: React.FC = () => {
     }
   }, [product, slug, navigate]);
 
-  // 3. Carousel Keyboard Arrow Navigation
+  // 5. Carousel Keyboard Arrow Navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (images.length <= 1) return;
@@ -116,15 +138,42 @@ const ProductDetailPage: React.FC = () => {
     setQuantity((q) => Math.max(1, q - 1));
   };
 
-  // Add to cart simulated action (RTK Query Cart mutation can be wired here)
-  const handleAddToCart = () => {
+  // Add item mutation trigger
+  const handleAddToCartAction = async () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: window.location.pathname } });
+      return;
+    }
+
+    if (user?.role !== 'CUSTOMER') {
+      alert('Only customers can view or manage shopping carts');
+      return;
+    }
+
     if (isOutOfStock) return;
     setIsAdding(true);
-    setTimeout(() => {
-      setIsAdding(false);
+    try {
+      await addToCart({ productId: product!._id, quantity }).unwrap();
       setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 2500);
-    }, 850);
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to add item to cart');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  // Remove item mutation trigger
+  const handleRemoveFromCartAction = async () => {
+    setIsAdding(true);
+    try {
+      await removeFromCart(product!._id).unwrap();
+      setAddedToCart(false);
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to remove item from cart');
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   if (isLoading) {
@@ -175,9 +224,9 @@ const ProductDetailPage: React.FC = () => {
         <span className="text-slate-300 truncate max-w-[200px] sm:max-w-xs">{product.title}</span>
       </nav>
 
-      {/* Grid Layout:stacks 1 col on mobile, 2 col on desktop */}
+      {/* Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-        {/* Left Column: Media & Specs */}
+        {/* Left Column */}
         <div className="lg:col-span-7 space-y-8">
           {/* Main Image Slider */}
           <div className="relative aspect-square w-full bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-md flex items-center justify-center">
@@ -195,7 +244,6 @@ const ProductDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* Slider chevron buttons (hidden when images.length <= 1) */}
             {images.length > 1 && (
               <>
                 <button
@@ -223,11 +271,10 @@ const ProductDetailPage: React.FC = () => {
                 <button
                   key={i}
                   onClick={() => setCurrentImageIndex(i)}
-                  className={`relative w-20 h-20 rounded-lg overflow-hidden border bg-slate-900 shrink-0 transition-all duration-200 ${
-                    currentImageIndex === i
+                  className={`relative w-20 h-20 rounded-lg overflow-hidden border bg-slate-900 shrink-0 transition-all duration-200 ${currentImageIndex === i
                       ? 'border-indigo-500 ring-2 ring-indigo-500/20'
                       : 'border-slate-800 hover:border-slate-700'
-                  }`}
+                    }`}
                 >
                   <img src={img.url} alt={`Thumbnail ${i}`} className="w-full h-full object-cover" />
                 </button>
@@ -244,7 +291,7 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Checkout panel & Merchant Details */}
+        {/* Right Column */}
         <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
           <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6 space-y-6 backdrop-blur-md">
             {/* Header info */}
@@ -315,7 +362,7 @@ const ProductDetailPage: React.FC = () => {
               </div>
 
               {/* Quantity selector controls */}
-              {!isOutOfStock && (
+              {!isOutOfStock && !isAlreadyInCart && (
                 <div className="flex items-center justify-between border-t border-slate-800/80 pt-4">
                   <span className="text-sm text-slate-400 font-semibold">Quantity</span>
                   <div className="flex items-center space-x-1 border border-slate-850 rounded-lg bg-slate-950 p-1">
@@ -345,30 +392,50 @@ const ProductDetailPage: React.FC = () => {
 
             {/* Action CTA Buttons */}
             <div className="space-y-3 pt-2">
-              <Button
-                onClick={handleAddToCart}
-                disabled={isOutOfStock || isAdding}
-                className="w-full relative shadow-md shadow-indigo-500/10"
-                leftIcon={
-                  isAdding ? (
-                    <Spinner size="sm" />
-                  ) : addedToCart ? (
-                    <Check size={16} />
-                  ) : (
-                    <ShoppingBag size={16} />
-                  )
-                }
-              >
-                {isAdding ? 'Adding to cart...' : addedToCart ? 'Added to Cart!' : 'Add to Cart'}
-              </Button>
-              <Button
+              {isAlreadyInCart ? (
+                <Button
+                  onClick={handleRemoveFromCartAction}
+                  disabled={isAdding}
+                  variant="outline"
+                  className="w-full text-red-400 hover:text-red-300 border-red-500/20 hover:bg-red-500/5 shadow-none"
+                  leftIcon={isAdding ? <Spinner size="sm" /> : <Trash2 size={16} />}
+                >
+                  {isAdding ? 'Removing...' : 'Remove from Cart'}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleAddToCartAction}
+                  disabled={isOutOfStock || isAdding || (isAuthenticated && user?.role !== 'CUSTOMER')}
+                  className="w-full relative shadow-md shadow-indigo-500/10"
+                  leftIcon={
+                    isAdding ? (
+                      <Spinner size="sm" />
+                    ) : addedToCart ? (
+                      <Check size={16} />
+                    ) : (
+                      <ShoppingBag size={16} />
+                    )
+                  }
+                >
+                  {isAdding ? 'Adding to cart...' : addedToCart ? 'Added to Cart!' : 'Add to Cart'}
+                </Button>
+              )}
+
+              {/* <Button
                 variant="outline"
                 className="w-full text-slate-300 hover:text-white border-slate-800"
-                disabled={isOutOfStock}
+                disabled={isOutOfStock || (isAuthenticated && user?.role !== 'CUSTOMER')}
                 onClick={() => alert(`Proceeding to buy ${quantity} unit(s).`)}
               >
                 Buy Now
-              </Button>
+              </Button> */}
+
+              {/* Gated warning helper for non-customers */}
+              {isAuthenticated && user?.role !== 'CUSTOMER' && (
+                <p className="text-[11px] text-amber-500 flex items-center justify-center gap-1.5 mt-2 bg-amber-500/5 border border-amber-500/10 p-2 rounded-lg">
+                  <AlertTriangle size={12} className="shrink-0" /> Cart actions are restricted to Customer accounts.
+                </p>
+              )}
             </div>
           </div>
         </div>

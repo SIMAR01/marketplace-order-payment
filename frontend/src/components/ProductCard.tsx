@@ -1,24 +1,75 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { IProduct } from '../api/productApi';
+import {
+  useGetCartQuery,
+  useAddToCartMutation,
+  useRemoveFromCartMutation,
+} from '../api/cartApi';
+import { useAppSelector } from '../hooks/storeHooks';
 import { CATEGORY_LABELS, ProductCategory } from '../constants/categories';
 import { generateProductSlug } from '../utils/slug';
-import { Package, AlertCircle } from 'lucide-react';
+import { Package, AlertCircle, ShoppingCart, Trash2, Check, Loader2 } from 'lucide-react';
 
 interface ProductCardProps {
   product: IProduct;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
-  const slug = generateProductSlug(product.title);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Retrieve primary image or fallback placeholder
+  // 1. Auth status selector
+  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
+
+  // 2. RTK Query: fetch active customer cart
+  const isCustomer = isAuthenticated && user?.role === 'CUSTOMER';
+  const { data: cart } = useGetCartQuery(undefined, {
+    skip: !isCustomer,
+  });
+
+  const [addToCart] = useAddToCartMutation();
+  const [removeFromCart] = useRemoveFromCartMutation();
+
+  const slug = generateProductSlug(product.title);
   const imageUrl = !imageError && product.images?.[0]?.url ? product.images[0].url : null;
   const categoryLabel = CATEGORY_LABELS[product.category as ProductCategory] || product.category;
 
   const isOutOfStock = product.stock === 0;
   const isLowStock = product.stock > 0 && product.stock < 10;
+
+  // Check if product is already in the cart
+  const isAlreadyInCart = cart?.items.some((item) => item.product._id === product._id) || false;
+
+  // Floating button quick cart add trigger (Stops card link navigation click events)
+  const handleQuickCartAction = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/products' } });
+      return;
+    }
+
+    if (user?.role !== 'CUSTOMER') {
+      alert('Only customers can add items to cart');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      if (isAlreadyInCart) {
+        await removeFromCart(product._id).unwrap();
+      } else {
+        await addToCart({ productId: product._id, quantity: 1 }).unwrap();
+      }
+    } catch (err: any) {
+      alert(err?.data?.message || 'Cart operation failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <Link
@@ -43,9 +94,33 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         )}
 
         {/* Floating Category Badge */}
-        <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md text-[10px] font-bold text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+        <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md text-[10px] font-bold text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider z-10">
           {categoryLabel}
         </span>
+
+        {/* Floating Quick Add/Remove Cart Button */}
+        {!isOutOfStock && (!isAuthenticated || user?.role === 'CUSTOMER') && (
+          <button
+            onClick={handleQuickCartAction}
+            disabled={isProcessing}
+            className={`absolute top-3 right-3 p-2 rounded-full border shadow backdrop-blur-md transition-all duration-300 z-10 ${
+              isProcessing
+                ? 'bg-slate-900/85 border-slate-800 text-slate-400'
+                : isAlreadyInCart
+                ? 'bg-red-600/90 hover:bg-red-700 border-red-500/30 text-white hover:scale-105'
+                : 'bg-indigo-600/90 hover:bg-indigo-700 border-indigo-500/30 text-white hover:scale-105'
+            }`}
+            title={isAlreadyInCart ? 'Remove from Cart' : 'Quick Add to Cart'}
+          >
+            {isProcessing ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : isAlreadyInCart ? (
+              <Trash2 size={14} />
+            ) : (
+              <ShoppingCart size={14} />
+            )}
+          </button>
+        )}
 
         {/* Floating Stock Warning Badge */}
         {isOutOfStock && (
@@ -79,7 +154,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
-        {/* Footer info: price and detail trigger */}
+        {/* Footer info */}
         <div className="flex items-center justify-between border-t border-slate-800/80 pt-3 mt-auto">
           <div className="flex flex-col">
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Price</span>

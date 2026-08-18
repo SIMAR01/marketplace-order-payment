@@ -449,3 +449,9 @@ Marks a product as deleted so it is hidden from catalog listings.
   }
   ```
 
+---
+
+## 4. Cart Management Module
+
+For detailed specifications about cart endpoints, request body models, dynamic subtotals/shipping/tax calculations, and role-based access check bounds, please see the dedicated [Cart Module Documentation](file:///e:/civilmantra_task/marketplace-order-payment/docs/CART_DOCUMENTATION.md).
+
