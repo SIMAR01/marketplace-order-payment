@@ -1,11 +1,22 @@
 import dotenv from 'dotenv';
 import app from './app';
+import { connectDB } from './config/db';
 
-// Load environment variables
+// Load configuration
 dotenv.config();
 
 const port = process.env.PORT || 5000;
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+const startServer = async (): Promise<void> => {
+  // Block server start until database is ready
+  await connectDB();
+
+  app.listen(port, () => {
+    console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${port}`);
+  });
+};
+
+startServer().catch((error) => {
+  console.error('Fatal server initialization error:', error);
+  process.exit(1);
 });
