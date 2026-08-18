@@ -14,8 +14,8 @@ interface JwtPayload {
  * Extracts token from HTTP cookies or Bearer token header.
  */
 export const verifyJWT = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
-  const token = 
-    req.cookies?.accessToken || 
+  const token =
+    req.cookies?.accessToken ||
     req.header('Authorization')?.replace('Bearer ', '');
 
   if (!token) {
@@ -29,7 +29,7 @@ export const verifyJWT = asyncHandler(async (req: Request, _res: Response, next:
 
   try {
     const decoded = jwt.verify(token, secret) as JwtPayload;
-    
+
     // Retrieve user and select password/tokens out
     const user = await User.findById(decoded._id);
     if (!user) {

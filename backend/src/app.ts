@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRouter from './routes/auth.routes';
+import productRouter from './routes/product.routes';
 import { errorHandler } from './middleware/error.middleware';
 
 const app = express();
@@ -16,8 +17,9 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// API Authentication Routes
+// API Routes
 app.use('/api/auth', authRouter);
+app.use('/api/products', productRouter);
 
 // Public health endpoint
 app.get('/api/health', (_req, res) => {

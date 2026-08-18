@@ -53,6 +53,17 @@ const Navbar: React.FC = () => {
               Home
             </NavLink>
 
+            {isAuthenticated && (user?.role === 'PROVIDER' || user?.role === 'ADMIN') && (
+              <>
+                <NavLink to="/products" className={getLinkClass}>
+                  My Products
+                </NavLink>
+                <NavLink to="/products/new" className={getLinkClass}>
+                  + Add Product
+                </NavLink>
+              </>
+            )}
+
             {isAuthenticated ? (
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2 px-3 py-1 bg-slate-800/80 rounded-full border border-slate-700">
@@ -113,6 +124,25 @@ const Navbar: React.FC = () => {
           >
             Home
           </NavLink>
+
+          {isAuthenticated && (user?.role === 'PROVIDER' || user?.role === 'ADMIN') && (
+            <>
+              <NavLink
+                to="/products"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                My Products
+              </NavLink>
+              <NavLink
+                to="/products/new"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                + Add Product
+              </NavLink>
+            </>
+          )}
 
           {isAuthenticated ? (
             <div className="pt-2 border-t border-slate-800 space-y-3">

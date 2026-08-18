@@ -5,7 +5,7 @@ import { ApiError } from '../utils/ApiError';
  * Reusable middleware that restricts route access based on user role parameters.
  * Throws 403 Forbidden on insufficient permissions.
  */
-export const authorizeRoles = (...roles: ('CUSTOMER' | 'ADMIN')[]): RequestHandler => {
+export const authorizeRoles = (...roles: ('CUSTOMER' | 'PROVIDER' | 'ADMIN')[]): RequestHandler => {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new ApiError(401, 'Unauthorized: Credentials missing.'));

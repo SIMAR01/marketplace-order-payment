@@ -249,3 +249,203 @@ Returned when a database unique constraint fails.
   "errors": []
 }
 ```
+
+## 3. Provider Product Management Endpoints
+
+All endpoints below require a valid access token sent in the headers as `Authorization: Bearer <token>` and are restricted to users with the role `PROVIDER` or `ADMIN`.
+
+### 3.1 Create Product
+Adds a new product to the provider's inventory.
+* **Endpoint**: `POST /api/products`
+* **Content-Type**: `multipart/form-data`
+* **Request Body**:
+  * **Text Fields** (form fields):
+    ```json
+    {
+      "title": "Professional Wireless Keyboard",
+      "description": "Ergonomic keyboard with mechanical switches.",
+      "price": "{\"amount\": 89.99, \"currency\": \"USD\"}",
+      "stock": 150,
+      "category": "Electronics"
+    }
+    ```
+  * **Files** (binary files):
+    * `images`: Binary file(s) (JPEG/PNG/WEBP, max 5 files, max 5MB each)
+* **Success Response (201 Created)**:
+  ```json
+  {
+    "success": true,
+    "statusCode": 201,
+    "message": "Product created successfully",
+    "data": {
+      "_id": "64724a2efca31e67dbd39301",
+      "title": "Professional Wireless Keyboard",
+      "description": "Ergonomic keyboard with mechanical switches.",
+      "price": {
+        "amount": 89.99,
+        "currency": "USD"
+      },
+      "stock": 150,
+      "category": "Electronics",
+      "images": [
+        {
+          "url": "https://res.cloudinary.com/demo/image/upload/v1572000000/products/key1.png",
+          "publicId": "products/key1"
+        }
+      ],
+      "provider": "64724a2efca31e67dbd39202",
+      "isDeleted": false,
+      "createdAt": "2026-08-18T16:00:00.000Z",
+      "updatedAt": "2026-08-18T16:00:00.000Z"
+    }
+  }
+  ```
+
+---
+
+### 3.2 List Provider Products
+Retrieves active products in the authenticated provider's catalog.
+* **Endpoint**: `GET /api/products`
+* **Query Parameters**:
+  * `page`: Number (default: 1)
+  * `limit`: Number (default: 10)
+  * `search`: String (regex matched against title and description)
+  * `category`: String (exact filter)
+  * `inStock`: Boolean ("true" to filter for stock > 0)
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Products retrieved successfully",
+    "data": {
+      "products": [
+        {
+          "_id": "64724a2efca31e67dbd39301",
+          "title": "Professional Wireless Keyboard",
+          "description": "Ergonomic keyboard with mechanical switches.",
+          "price": {
+            "amount": 89.99,
+            "currency": "USD"
+          },
+          "stock": 150,
+          "category": "Electronics",
+          "images": [
+            {
+              "url": "https://res.cloudinary.com/demo/image/upload/v1572000000/products/key1.png",
+              "publicId": "products/key1"
+            }
+          ],
+          "provider": "64724a2efca31e67dbd39202",
+          "isDeleted": false,
+          "createdAt": "2026-08-18T16:00:00.000Z",
+          "updatedAt": "2026-08-18T16:00:00.000Z"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "totalPages": 1
+    }
+  }
+  ```
+
+---
+
+### 3.3 Get Provider Product By ID
+Fetches details of a specific product owned by the provider.
+* **Endpoint**: `GET /api/products/:id`
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Product details retrieved successfully",
+    "data": {
+      "_id": "64724a2efca31e67dbd39301",
+      "title": "Professional Wireless Keyboard",
+      "description": "Ergonomic keyboard with mechanical switches.",
+      "price": {
+        "amount": 89.99,
+        "currency": "USD"
+      },
+      "stock": 150,
+      "category": "Electronics",
+      "images": [
+        {
+          "url": "https://res.cloudinary.com/demo/image/upload/v1572000000/products/key1.png",
+          "publicId": "products/key1"
+        }
+      ],
+      "provider": "64724a2efca31e67dbd39202",
+      "isDeleted": false,
+      "createdAt": "2026-08-18T16:00:00.000Z",
+      "updatedAt": "2026-08-18T16:00:00.000Z"
+    }
+  }
+  ```
+
+---
+
+### 3.4 Update Product
+Updates text details or replaces/appends image attachments for a product.
+* **Endpoint**: `PATCH /api/products/:id`
+* **Content-Type**: `multipart/form-data`
+* **Request Body** (All fields optional):
+  * **Text Fields** (form fields):
+    ```json
+    {
+      "title": "Updated Keyboard Title",
+      "description": "Ergonomic keyboard with mechanical switches.",
+      "price": "{\"amount\": 79.99}",
+      "stock": 120,
+      "category": "Electronics",
+      "replaceImages": "false"
+    }
+    ```
+  * **Files** (binary files):
+    * `images`: Binary file(s) (JPEG/PNG/WEBP, max 5 files, max 5MB each)
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Product updated successfully",
+    "data": {
+      "_id": "64724a2efca31e67dbd39301",
+      "title": "Updated Keyboard Title",
+      "description": "Ergonomic keyboard with mechanical switches.",
+      "price": {
+        "amount": 79.99,
+        "currency": "USD"
+      },
+      "stock": 120,
+      "category": "Electronics",
+      "images": [
+        {
+          "url": "https://res.cloudinary.com/demo/image/upload/v1572000000/products/key_new.png",
+          "publicId": "products/key_new"
+        }
+      ],
+      "provider": "64724a2efca31e67dbd39202",
+      "isDeleted": false,
+      "createdAt": "2026-08-18T16:00:00.000Z",
+      "updatedAt": "2026-08-18T19:00:00.000Z"
+    }
+  }
+  ```
+
+---
+
+### 3.5 Delete Product (Soft Delete)
+Marks a product as deleted so it is hidden from catalog listings.
+* **Endpoint**: `DELETE /api/products/:id`
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Product removed successfully",
+    "data": {}
+  }
+  ```
+

@@ -9,6 +9,11 @@ import UnauthorizedPage from '../pages/UnauthorizedPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import ProtectedRoute from './ProtectedRoute';
 import PublicRoute from './PublicRoute';
+import ProviderRoute from './ProviderRoute';
+
+// Provider Pages
+import ProductListPage from '../pages/provider/ProductListPage';
+import ProductFormPage from '../pages/provider/ProductFormPage';
 
 export const routes: RouteObject[] = [
   {
@@ -41,6 +46,30 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <DashboardPage />
           </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'products',
+        element: (
+          <ProviderRoute>
+            <ProductListPage />
+          </ProviderRoute>
+        ),
+      },
+      {
+        path: 'products/new',
+        element: (
+          <ProviderRoute>
+            <ProductFormPage />
+          </ProviderRoute>
+        ),
+      },
+      {
+        path: 'products/edit/:id',
+        element: (
+          <ProviderRoute>
+            <ProductFormPage />
+          </ProviderRoute>
         ),
       },
       {

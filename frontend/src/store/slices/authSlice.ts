@@ -39,8 +39,6 @@ const authSlice = createSlice({
     },
     updateAccessToken: (state, action: PayloadAction<string>) => {
       state.token = action.payload;
-      state.isAuthenticated = true;
-      state.isInitialized = true;
     },
     updateProfile: (state, action: PayloadAction<UserProfile>) => {
       state.user = action.payload;
