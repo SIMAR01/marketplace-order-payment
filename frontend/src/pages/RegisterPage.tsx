@@ -1,26 +1,26 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import AuthLayout from '../components/auth/AuthLayout';
-import LoginForm from '../components/auth/LoginForm';
+import RegisterForm from '../components/auth/RegisterForm';
 
-const LoginPage: React.FC = () => {
+const RegisterPage: React.FC = () => {
   return (
     <AuthLayout
-      title="Welcome Back"
-      subtitle="Sign in to manage your orders, invoices, and payments"
+      title="Create Account"
+      subtitle="Register as Customer or Provider and access the trade catalog"
     >
-      <LoginForm />
+      <RegisterForm />
       <div className="mt-6 text-center text-xs">
-        <span className="text-slate-400">New to the marketplace? </span>
+        <span className="text-slate-400">Already have an account? </span>
         <Link
-          to="/register"
+          to="/login"
           className="font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
         >
-          Create an Account
+          Sign In Here
         </Link>
       </div>
     </AuthLayout>
   );
 };
 
-export default LoginPage;
+export default RegisterPage;
