@@ -212,7 +212,7 @@ const ProductFormPage: React.FC = () => {
       } else {
         await createProduct(formData).unwrap();
       }
-      navigate('/products');
+      navigate('/inventory');
     } catch (err: any) {
       setServerError(
         err?.data?.message || err?.message || 'Failed to submit form. Please check your connection.'
@@ -238,7 +238,7 @@ const ProductFormPage: React.FC = () => {
         <p className="text-slate-400 mb-6">
           The requested product details could not be found or you lack permission to access them.
         </p>
-        <Link to="/products">
+        <Link to="/inventory">
           <Button leftIcon={<ArrowLeft size={16} />} variant="outline">
             Back to Inventory
           </Button>
@@ -253,7 +253,7 @@ const ProductFormPage: React.FC = () => {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-screen bg-slate-950 text-slate-100">
       {/* Back breadcrumb */}
       <Link
-        to="/products"
+        to="/inventory"
         className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-400 hover:text-white mb-6 group transition-colors"
       >
         <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
@@ -486,7 +486,7 @@ const ProductFormPage: React.FC = () => {
 
         {/* Submit controls */}
         <div className="border-t border-slate-800 pt-6 flex items-center justify-end space-x-4">
-          <Link to="/products">
+          <Link to="/inventory">
             <Button variant="outline" disabled={isSubmitting}>
               Cancel
             </Button>

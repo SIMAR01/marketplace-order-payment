@@ -254,3 +254,111 @@ export const deleteProduct = asyncHandler(async (req: Request, res: Response) =>
 
   res.status(200).json(new ApiResponse(200, {}, 'Product removed successfully'));
 });
+
+/**
+ * Public catalog search endpoint.
+ * Retrieves all active products, supporting search keyword, category, price boundaries, stock status, and sorting.
+ */
+export const getProducts = asyncHandler(async (req: Request, res: Response) => {
+  const { keyword, category, minPrice, maxPrice, inStock, sortBy, page = 1, limit = 12 } = req.query;
+
+  const queryConditions: any = {
+    isDeleted: false,
+  };
+
+  // 1. Text Search Filter
+  if (keyword) {
+    queryConditions.$or = [
+      { title: { $regex: String(keyword).trim(), $options: 'i' } },
+      { description: { $regex: String(keyword).trim(), $options: 'i' } },
+    ];
+  }
+
+  // 2. Category Filter
+  if (category) {
+    queryConditions.category = String(category).trim();
+  }
+
+  // 3. Price Filter (Converts decimal bounds to cents)
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    queryConditions['price.amount'] = {};
+    if (minPrice !== undefined && minPrice !== '') {
+      const minCents = Math.round(Number(minPrice) * 100);
+      if (!isNaN(minCents)) {
+        queryConditions['price.amount'].$gte = minCents;
+      }
+    }
+    if (maxPrice !== undefined && maxPrice !== '') {
+      const maxCents = Math.round(Number(maxPrice) * 100);
+      if (!isNaN(maxCents)) {
+        queryConditions['price.amount'].$lte = maxCents;
+      }
+    }
+  }
+
+  // 4. In Stock Filter
+  if (inStock === 'true') {
+    queryConditions.stock = { $gt: 0 };
+  }
+
+  // 5. Sorting Rules
+  let sortOption: any = { createdAt: -1 }; // Default: Newest
+  if (sortBy === 'price_asc') {
+    sortOption = { 'price.amount': 1 };
+  } else if (sortBy === 'price_desc') {
+    sortOption = { 'price.amount': -1 };
+  } else if (sortBy === 'newest') {
+    sortOption = { createdAt: -1 };
+  } else if (sortBy === 'featured') {
+    sortOption = { title: 1 };
+  }
+
+  // 6. Pagination Computations
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.max(1, Number(limit) || 12);
+  const skip = (pageNum - 1) * limitNum;
+
+  // Execute database lookup and count in parallel
+  const [products, total] = await Promise.all([
+    Product.find(queryConditions)
+      .populate('provider', 'name email businessName phone')
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limitNum),
+    Product.countDocuments(queryConditions),
+  ]);
+
+  const totalPages = Math.ceil(total / limitNum);
+  const serializedProducts = products.map((product) => serializeProduct(product));
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      { products: serializedProducts, total, page: pageNum, totalPages },
+      'Products retrieved successfully'
+    )
+  );
+});
+
+/**
+ * Public details endpoint.
+ * Returns product details by ID, populated with provider profile details.
+ */
+export const getProductById = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  if (!Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, 'Invalid product ID format');
+  }
+
+  const product = await Product.findOne({
+    _id: id,
+    isDeleted: false,
+  }).populate('provider', 'name email businessName phone');
+
+  if (!product) {
+    throw new ApiError(404, 'Product not found');
+  }
+
+  res.status(200).json(new ApiResponse(200, serializeProduct(product), 'Product details retrieved successfully'));
+});

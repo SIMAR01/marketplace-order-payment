@@ -52,13 +52,16 @@ const Navbar: React.FC = () => {
             <NavLink to="/" end className={getLinkClass}>
               Home
             </NavLink>
+            <NavLink to="/products" end className={getLinkClass}>
+              Shop
+            </NavLink>
 
             {isAuthenticated && (user?.role === 'PROVIDER' || user?.role === 'ADMIN') && (
               <>
-                <NavLink to="/products" className={getLinkClass}>
+                <NavLink to="/inventory" className={getLinkClass}>
                   My Products
                 </NavLink>
-                <NavLink to="/products/new" className={getLinkClass}>
+                <NavLink to="/inventory/new" className={getLinkClass}>
                   + Add Product
                 </NavLink>
               </>
@@ -124,18 +127,25 @@ const Navbar: React.FC = () => {
           >
             Home
           </NavLink>
+          <NavLink
+            to="/products"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            Shop
+          </NavLink>
 
           {isAuthenticated && (user?.role === 'PROVIDER' || user?.role === 'ADMIN') && (
             <>
               <NavLink
-                to="/products"
+                to="/inventory"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
               >
                 My Products
               </NavLink>
               <NavLink
-                to="/products/new"
+                to="/inventory/new"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
               >

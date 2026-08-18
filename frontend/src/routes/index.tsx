@@ -1,4 +1,3 @@
-import React from 'react';
 import { RouteObject } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import HomePage from '../pages/HomePage';
@@ -11,9 +10,13 @@ import ProtectedRoute from './ProtectedRoute';
 import PublicRoute from './PublicRoute';
 import ProviderRoute from './ProviderRoute';
 
-// Provider Pages
+// Provider/Merchant Pages
 import ProductListPage from '../pages/provider/ProductListPage';
 import ProductFormPage from '../pages/provider/ProductFormPage';
+
+// Public Pages
+import ProductsSearchPage from '../pages/ProductsSearchPage';
+import ProductDetailPage from '../pages/ProductDetailPage';
 
 export const routes: RouteObject[] = [
   {
@@ -48,8 +51,19 @@ export const routes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
+      // Public Search Catalog
       {
         path: 'products',
+        element: <ProductsSearchPage />,
+      },
+      // Public Product Detail Page (PDP)
+      {
+        path: 'p/:slug/:id',
+        element: <ProductDetailPage />,
+      },
+      // Protected Merchant Inventory Management
+      {
+        path: 'inventory',
         element: (
           <ProviderRoute>
             <ProductListPage />
@@ -57,7 +71,7 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'products/new',
+        path: 'inventory/new',
         element: (
           <ProviderRoute>
             <ProductFormPage />
@@ -65,7 +79,7 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'products/edit/:id',
+        path: 'inventory/edit/:id',
         element: (
           <ProviderRoute>
             <ProductFormPage />

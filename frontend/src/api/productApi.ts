@@ -10,6 +10,14 @@ export interface IMoney {
   currency: string;
 }
 
+export interface IProviderInfo {
+  _id: string;
+  name: string;
+  email: string;
+  businessName?: string;
+  phone?: string;
+}
+
 export interface IProduct {
   _id: string;
   title: string;
@@ -18,7 +26,7 @@ export interface IProduct {
   stock: number;
   category: string;
   images: IProductImage[];
-  provider: string; // User ID of the provider (UUID)
+  provider: IProviderInfo | string; // Can be populated object or raw ID string
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
@@ -27,8 +35,11 @@ export interface IProduct {
 export interface GetProductsParams {
   page?: number;
   limit?: number;
-  search?: string;
+  keyword?: string;
   category?: string;
+  sortBy?: string;
+  minPrice?: number;
+  maxPrice?: number;
   inStock?: boolean;
 }
 
@@ -48,9 +59,34 @@ interface ApiResponseWrapper<T> {
 
 export const productApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getProviderProducts: builder.query<GetProductsResponse, GetProductsParams>({
+    // Public Catalog Search query
+    getProducts: builder.query<GetProductsResponse, GetProductsParams>({
       query: (params) => ({
         url: '/products',
+        method: 'GET',
+        params,
+      }),
+      transformResponse: (response: ApiResponseWrapper<GetProductsResponse>) => response.data,
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.products.map(({ _id }) => ({ type: 'Product' as const, id: _id })),
+              { type: 'Product', id: 'LIST' },
+            ]
+          : [{ type: 'Product', id: 'LIST' }],
+    }),
+
+    // Public Product Detail Page (PDP) query
+    getProductById: builder.query<IProduct, string>({
+      query: (id) => `/products/${id}`,
+      transformResponse: (response: ApiResponseWrapper<IProduct>) => response.data,
+      providesTags: (_result, _error, id) => [{ type: 'Product', id }],
+    }),
+
+    // Protected Merchant Inventory list query
+    getProviderProducts: builder.query<GetProductsResponse, GetProductsParams>({
+      query: (params) => ({
+        url: '/products/inventory',
         method: 'GET',
         params,
       }),
@@ -63,6 +99,8 @@ export const productApi = apiSlice.injectEndpoints({
             ]
           : [{ type: 'ProviderProducts', id: 'LIST' }],
     }),
+
+    // Protected Merchant Product Detail lookup
     getProviderProductById: builder.query<IProduct, string>({
       query: (id) => `/products/${id}`,
       transformResponse: (response: ApiResponseWrapper<IProduct>) => response.data,
@@ -71,6 +109,7 @@ export const productApi = apiSlice.injectEndpoints({
         { type: 'Product', id: 'DETAIL' },
       ],
     }),
+
     createProduct: builder.mutation<IProduct, FormData>({
       query: (formData) => ({
         url: '/products',
@@ -83,6 +122,7 @@ export const productApi = apiSlice.injectEndpoints({
         { type: 'Product', id: 'LIST' },
       ],
     }),
+
     updateProduct: builder.mutation<IProduct, { id: string; formData: FormData }>({
       query: ({ id, formData }) => ({
         url: `/products/${id}`,
@@ -96,6 +136,7 @@ export const productApi = apiSlice.injectEndpoints({
         { type: 'ProviderProducts', id: 'LIST' },
       ],
     }),
+
     deleteProduct: builder.mutation<void, string>({
       query: (id) => ({
         url: `/products/${id}`,
@@ -111,6 +152,8 @@ export const productApi = apiSlice.injectEndpoints({
 });
 
 export const {
+  useGetProductsQuery,
+  useGetProductByIdQuery,
   useGetProviderProductsQuery,
   useGetProviderProductByIdQuery,
   useCreateProductMutation,

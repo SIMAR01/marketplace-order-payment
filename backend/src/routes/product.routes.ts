@@ -10,22 +10,31 @@ import {
   getProviderProductById,
   updateProduct,
   deleteProduct,
+  getProducts,
+  getProductById,
 } from '../controllers/product.controller';
 
 const router = Router();
 
-// Secure all product routes to only logged-in Providers or Admins
-router.use(verifyJWT, authorizeRoles('PROVIDER', 'ADMIN'));
+// Middleware chain helper for provider/admin authentication
+const requireProviderAuth = [verifyJWT, authorizeRoles('PROVIDER', 'ADMIN')];
 
+// 1. Base endpoints
 router
   .route('/')
-  .get(getProviderProducts)
-  .post(upload.array('images', 5), validate(createProductSchema), createProduct);
+  .get(getProducts) // Public Search (unprotected)
+  .post(requireProviderAuth, upload.array('images', 5), validate(createProductSchema), createProduct); // Protected create
 
+// 2. Provider Inventory endpoint
+router
+  .route('/inventory')
+  .get(requireProviderAuth, getProviderProducts); // Protected list
+
+// 3. ID specific endpoints
 router
   .route('/:id')
-  .get(getProviderProductById)
-  .patch(upload.array('images', 5), validate(updateProductSchema), updateProduct)
-  .delete(deleteProduct);
+  .get(getProductById) // Public PDP Details (unprotected)
+  .patch(requireProviderAuth, upload.array('images', 5), validate(updateProductSchema), updateProduct) // Protected edit
+  .delete(requireProviderAuth, deleteProduct); // Protected delete
 
 export default router;

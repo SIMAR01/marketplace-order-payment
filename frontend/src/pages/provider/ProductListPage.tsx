@@ -38,7 +38,6 @@ const ProductListPage: React.FC = () => {
     isLoading,
     isFetching,
     error,
-    refetch,
   } = useGetProviderProductsQuery(
     {
       page: currentPage,
@@ -183,7 +182,7 @@ const ProductListPage: React.FC = () => {
           <p className="text-slate-400 mb-6 text-sm">
             We couldn't find any items in your inventory matching the active filters. Get started by creating your first product listing.
           </p>
-          <Link to="/products/new">
+          <Link to="/inventory/new">
             <Button leftIcon={<Plus size={16} />}>Create Product</Button>
           </Link>
         </div>
@@ -290,7 +289,7 @@ const ProductListPage: React.FC = () => {
                         <td className="px-6 py-4 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end space-x-3">
                             <button
-                              onClick={() => navigate(`/products/edit/${product._id}`)}
+                              onClick={() => navigate(`/inventory/edit/${product._id}`)}
                               className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-colors"
                               title="Edit product"
                             >
