@@ -455,3 +455,15 @@ Marks a product as deleted so it is hidden from catalog listings.
 
 For detailed specifications about cart endpoints, request body models, dynamic subtotals/shipping/tax calculations, and role-based access check bounds, please see the dedicated [Cart Module Documentation](file:///e:/civilmantra_task/marketplace-order-payment/docs/CART_DOCUMENTATION.md).
 
+---
+
+## 5. Stripe Checkout & Payment Module
+
+For detailed specifications about checkout PaymentIntent initialization, request body fields, Stripe Element mappings, Webhook validation events, and atomic inventory stock verification procedures, please see the dedicated [Stripe Checkout & Payment Module Documentation](file:///e:/civilmantra_task/marketplace-order-payment/docs/STRIPE_CHECKOUT_DOCUMENTATION.md).
+
+---
+
+## 6. Stripe Connect Onboarding & Payouts Module
+
+For detailed specifications about provider Stripe Connect Express account onboarding links, status retrieval, dashboard login portals, and Webhook synchronization, please see the dedicated [Stripe Connect Onboarding & Payouts Documentation](file:///e:/civilmantra_task/marketplace-order-payment/docs/STRIPE_CONNECT_DOCUMENTATION.md).
+

@@ -50,9 +50,9 @@ const serializeCart = (cart: any) => {
     })
     .filter(Boolean);
 
-  // Dynamic pricing calculations (Flat $5.00 shipping fee and 8% tax)
+  // Dynamic pricing calculations (Flat $5.00 shipping fee and 3% tax)
   const shippingFeeCents = subtotalCents > 0 ? 500 : 0;
-  const taxRate = 0.08;
+  const taxRate = 0.03;
   const taxCents = Math.round(subtotalCents * taxRate);
   const totalAmountCents = subtotalCents + shippingFeeCents + taxCents;
 

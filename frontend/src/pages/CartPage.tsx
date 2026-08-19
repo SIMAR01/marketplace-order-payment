@@ -271,7 +271,7 @@ const CartPage: React.FC = () => {
                   <span className="font-mono text-slate-200">${totals.shippingFee.toFixed(2)} USD</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-400 border-b border-slate-850 pb-3">
-                  <span>Estimated Tax (8%)</span>
+                  <span>Estimated Tax (3%)</span>
                   <span className="font-mono text-slate-200">${totals.tax.toFixed(2)} USD</span>
                 </div>
                 <div className="flex items-center justify-between text-base font-extrabold text-white pt-1">
@@ -293,7 +293,7 @@ const CartPage: React.FC = () => {
             {/* Checkout CTA */}
             <div className="space-y-3">
               <Button
-                onClick={() => alert('Proceeding to Checkout page...')}
+                onClick={() => navigate('/checkout')}
                 disabled={hasWarnings || items.length === 0}
                 className="w-full shadow-lg shadow-indigo-500/10"
                 leftIcon={<CreditCard size={16} />}

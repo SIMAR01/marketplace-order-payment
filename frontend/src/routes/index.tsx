@@ -18,6 +18,8 @@ import ProductFormPage from '../pages/provider/ProductFormPage';
 import ProductsSearchPage from '../pages/ProductsSearchPage';
 import ProductDetailPage from '../pages/ProductDetailPage';
 import CartPage from '../pages/CartPage';
+import CheckoutPage from '../pages/CheckoutPage';
+import CheckoutSuccessPage from '../pages/CheckoutSuccessPage';
 
 export const routes: RouteObject[] = [
   {
@@ -58,6 +60,23 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <CartPage />
+          </ProtectedRoute>
+        ),
+      },
+      // Checkout flow
+      {
+        path: 'checkout',
+        element: (
+          <ProtectedRoute>
+            <CheckoutPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'checkout/success',
+        element: (
+          <ProtectedRoute>
+            <CheckoutSuccessPage />
           </ProtectedRoute>
         ),
       },

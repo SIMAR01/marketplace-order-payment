@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { Product, IProduct } from '../models/Product';
+import { User } from '../models/User';
 import { ApiError } from '../utils/ApiError';
 import { ApiResponse } from '../utils/ApiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -26,6 +27,14 @@ const serializeProduct = (product: IProduct) => {
  * Checks for title conflicts and rolls back Cloudinary uploads in case of Mongoose validation/DB issues.
  */
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
+  // Verify Stripe Connect Onboarding status
+  if (!req.user.isStripeReady) {
+    const provider = await User.findById(req.user._id);
+    if (!provider?.isStripeReady) {
+      throw new ApiError(403, 'You must configure your Stripe payout details before listing products for sale from My Products page.');
+    }
+  }
+
   const { title, description, price, stock, category } = req.body;
 
   // 1. Image presence validation

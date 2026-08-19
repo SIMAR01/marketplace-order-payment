@@ -8,6 +8,9 @@ export interface IUser extends Document {
   role: 'CUSTOMER' | 'PROVIDER' | 'ADMIN';
   phone?: string;
   businessName?: string;
+  stripeAccountId?: string;
+  isStripeReady?: boolean;
+  stripeDetailsSubmitted?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -23,6 +23,8 @@ import { CATEGORY_LABELS, ProductCategory } from '../../constants/categories';
 import Button from '../../components/common/Button';
 import Spinner from '../../components/common/Spinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
+import { useGetStripeStatusQuery } from '../../api/stripeConnectApi';
+import StripePayoutStatusCard from '../../components/StripePayoutStatusCard';
 
 const ProductListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -94,6 +96,9 @@ const ProductListPage: React.FC = () => {
     }
   };
 
+  const { data: stripeStatus } = useGetStripeStatusQuery();
+  const isStripeReady = stripeStatus?.isStripeReady || false;
+
   const totalPages = responseData?.totalPages || 1;
   const products = responseData?.products || [];
   const totalItems = responseData?.total || 0;
@@ -110,11 +115,30 @@ const ProductListPage: React.FC = () => {
             Manage your store items, adjust stock counts, and create new catalog entries.
           </p>
         </div>
-        <Link to="/products/new">
-          <Button leftIcon={<Plus size={16} />} className="shadow-lg shadow-indigo-500/20">
-            Add New Product
-          </Button>
-        </Link>
+        <Button
+          onClick={() => {
+            if (!isStripeReady) {
+              alert('You must complete your Stripe Connect payout onboarding before listing new products.');
+            } else {
+              navigate('/products/new');
+            }
+          }}
+          disabled={!isStripeReady}
+          title={!isStripeReady ? 'Configure Stripe payouts to add products' : 'Create a new catalog item'}
+          leftIcon={<Plus size={16} />}
+          className={`shadow-lg ${
+            !isStripeReady
+              ? 'opacity-50 cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500'
+              : 'shadow-indigo-500/20 shadow-indigo-500/10'
+          }`}
+        >
+          Add New Product
+        </Button>
+      </div>
+
+      {/* Stripe Connect status card */}
+      <div className="mb-8">
+        <StripePayoutStatusCard />
       </div>
 
       {/* Filter and search controllers */}

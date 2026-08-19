@@ -35,6 +35,19 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
     businessName: {
       type: String,
       trim: true,
+    },
+    stripeAccountId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    isStripeReady: {
+      type: Boolean,
+      default: false,
+    },
+    stripeDetailsSubmitted: {
+      type: Boolean,
+      default: false,
     }
   },
   {
@@ -67,7 +80,7 @@ userSchema.methods.generateAccessToken = function (): string {
   if (!secret) {
     throw new Error('JWT_ACCESS_SECRET is not defined in environment variables.');
   }
-  const expiresIn = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
+  const expiresIn = process.env.JWT_ACCESS_EXPIRES_IN || '3h';
   return jwt.sign(
     { _id: this._id, role: this.role },
     secret,
