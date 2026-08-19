@@ -5,8 +5,8 @@ import { ApiError } from '../utils/ApiError';
 import { ApiResponse } from '../utils/ApiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
 
-// Initialize Stripe instance supporting STRIPE_SECRET_KEY or STRIPE_TEST_KEY fallback
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || process.env.STRIPE_TEST_KEY || '', {
+// Initialize Stripe instance supporting STRIPE_TEST_KEY with STRIPE_SECRET_KEY fallback
+const stripe = new Stripe(process.env.STRIPE_TEST_KEY || process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16' as any,
 });
 

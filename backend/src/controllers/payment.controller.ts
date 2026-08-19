@@ -11,8 +11,8 @@ import { ApiError } from '../utils/ApiError';
 import { ApiResponse } from '../utils/ApiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
 
-// Initialize Stripe instance
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || process.env.STRIPE_TEST_KEY || '', {
+// Initialize Stripe instance prioritizing STRIPE_TEST_KEY
+const stripe = new Stripe(process.env.STRIPE_TEST_KEY || process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16' as any,
 });
 
@@ -554,7 +554,7 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
   }
 
   order.status = status as any;
-  
+
   if (status === 'SHIPPED') {
     order.shippedAt = new Date();
   } else if (status === 'DELIVERED') {
@@ -762,7 +762,7 @@ export const verifyCheckoutSuccess = asyncHandler(async (req: Request, res: Resp
   if (order.paymentStatus === 'PENDING') {
     try {
       const paymentIntent = await stripe.paymentIntents.retrieve(order.paymentIntentId);
-      
+
       if (paymentIntent.status === 'succeeded') {
         // Run atomic stock check & decrement
         const rolledBackItems: Array<{ productId: any; quantity: number }> = [];

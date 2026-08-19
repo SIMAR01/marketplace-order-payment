@@ -17,7 +17,7 @@ import Button from '../components/common/Button';
 import Spinner from '../components/common/Spinner';
 
 // Initialize Stripe Promise
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51U61Nu4TuQyO6iVKIg8GoEvaTO3i6x0L5c1BqyjrbPqSoelY77kl5D04Drg2h2vJXei1FVYDK18x2krkjXCLkb1r006pEikmJg');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 // --- UNIFIED CHECKOUT FORM (ADDRESS + CARD IN ONE STEP) ---
 interface UnifiedFormProps {
