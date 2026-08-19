@@ -20,6 +20,8 @@ import ProductDetailPage from '../pages/ProductDetailPage';
 import CartPage from '../pages/CartPage';
 import CheckoutPage from '../pages/CheckoutPage';
 import CheckoutSuccessPage from '../pages/CheckoutSuccessPage';
+import OrdersPage from '../pages/OrdersPage';
+import AdminDashboardPage from '../pages/AdminDashboardPage';
 
 export const routes: RouteObject[] = [
   {
@@ -77,6 +79,22 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <CheckoutSuccessPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'orders',
+        element: (
+          <ProtectedRoute>
+            <OrdersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin',
+        element: (
+          <ProtectedRoute>
+            <AdminDashboardPage />
           </ProtectedRoute>
         ),
       },

@@ -1,73 +1,101 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IOrderItem {
   product: mongoose.Types.ObjectId;
   title: string;
   quantity: number;
-  unitPrice: number; // Stored in cents (integer)
-  provider: mongoose.Types.ObjectId;
-}
-
-export interface IShippingAddress {
-  street: string;
-  area: string;
-  city: string;
-  state: string;
-  pincode: string;
+  unitPrice: number; // Stored in cents inside items to avoid rounding, converted during intent creation
+  imageUrl?: string;
 }
 
 export interface IOrder extends Document {
-  user: mongoose.Types.ObjectId;
+  orderNumber: string;
+  customer: mongoose.Types.ObjectId;
+  provider: mongoose.Types.ObjectId;
   items: IOrderItem[];
-  totalAmount: number; // Stored in cents (integer)
-  status: 'PENDING' | 'PAID' | 'PROCESSING' | 'SHIPPED' | 'CANCELLED' | 'PAYMENT_FAILED' | 'PAYMENT_HELD_STOCK_FAILED' | 'REFUNDED';
-  paymentIntentId?: string;
-  idempotencyKey?: string;
-  shippingAddress: IShippingAddress;
+  financials: {
+    grossAmount: number; // in dollars (decimal representation)
+    platformFee: number; // in dollars
+    stripeFee: number; // in dollars
+    netPayout: number; // in dollars
+    currency: string;
+  };
+  shippingAddress: {
+    street: string;
+    area: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  status: 'PLACED' | 'PACKED' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCEL_REQUESTED' | 'CANCELLED';
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  payoutStatus: 'HELD_IN_ESCROW' | 'TRANSFERRED' | 'CANCELLED';
+  paymentIntentId: string;
+  stripeChargeId?: string;
+  stripeTransferId?: string;
+  cancelReason?: string;
+  shippedAt?: Date;
+  deliveredAt?: Date;
+  completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const OrderItemSchema = new Schema<IOrderItem>(
-  {
-    product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
-    title: { type: String, required: true },
-    quantity: { type: Number, required: true, min: [1, 'Quantity must be at least 1'] },
-    unitPrice: { type: Number, required: true },
-    provider: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  },
-  { _id: false }
-);
-
-const ShippingAddressSchema = new Schema<IShippingAddress>(
-  {
-    street: { type: String, required: true },
-    area: { type: String, required: true },
-    city: { type: String, required: true },
-    state: { type: String, required: true },
-    pincode: { type: String, required: true },
-  },
-  { _id: false }
-);
-
 const OrderSchema = new Schema<IOrder>(
   {
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    items: [OrderItemSchema],
-    totalAmount: { type: Number, required: true },
+    orderNumber: { type: String, required: true, unique: true, index: true },
+    customer: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    provider: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    items: [
+      {
+        product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+        title: { type: String, required: true },
+        quantity: { type: Number, required: true, min: 1 },
+        unitPrice: { type: Number, required: true },
+        imageUrl: { type: String },
+      },
+    ],
+    financials: {
+      grossAmount: { type: Number, required: true },
+      platformFee: { type: Number, required: true, default: 0 },
+      stripeFee: { type: Number, required: true, default: 0 },
+      netPayout: { type: Number, required: true },
+      currency: { type: String, default: 'usd' },
+    },
+    shippingAddress: {
+      street: { type: String, required: true },
+      area: { type: String, required: true },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      pincode: { type: String, required: true },
+    },
     status: {
       type: String,
-      enum: ['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'CANCELLED', 'PAYMENT_FAILED', 'PAYMENT_HELD_STOCK_FAILED', 'REFUNDED'],
+      enum: ['PLACED', 'PACKED', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCEL_REQUESTED', 'CANCELLED'],
+      default: 'PLACED',
+      index: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
       default: 'PENDING',
       index: true,
     },
+    payoutStatus: {
+      type: String,
+      enum: ['HELD_IN_ESCROW', 'TRANSFERRED', 'CANCELLED'],
+      default: 'HELD_IN_ESCROW',
+      index: true,
+    },
     paymentIntentId: { type: String, index: true },
-    idempotencyKey: { type: String, unique: true, sparse: true },
-    shippingAddress: { type: ShippingAddressSchema, required: true },
+    stripeChargeId: { type: String },
+    stripeTransferId: { type: String },
+    cancelReason: { type: String },
+    shippedAt: { type: Date },
+    deliveredAt: { type: Date },
+    completedAt: { type: Date },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 export const Order = mongoose.model<IOrder>('Order', OrderSchema);

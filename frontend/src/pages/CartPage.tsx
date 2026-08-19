@@ -5,7 +5,6 @@ import {
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
   useClearCartMutation,
-  ICartItem,
 } from '../api/cartApi';
 import { CATEGORY_LABELS, ProductCategory } from '../constants/categories';
 import {
@@ -27,7 +26,7 @@ import { generateProductSlug } from '../utils/slug';
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
 
-  // 1. RTK Query: fetch populated cart details
+  // 1. RTK Query: fetch populated cart details grouped by vendor packages
   const { data: cart, isLoading, error, refetch } = useGetCartQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
@@ -36,16 +35,16 @@ const CartPage: React.FC = () => {
   const [removeFromCart, { isLoading: isRemoving }] = useRemoveFromCartMutation();
   const [clearCart, { isLoading: isClearing }] = useClearCartMutation();
 
-  const items = cart?.items || [];
-  const totals = cart?.totals;
+  const vendorPackages = cart?.vendorPackages || [];
+  const totalCartItemsCount = cart?.totalCartItemsCount || 0;
   const hasWarnings = cart?.hasWarnings || false;
 
   // Quantity modifiers
-  const handleQuantityChange = async (item: ICartItem, newQty: number) => {
+  const handleQuantityChange = async (productId: string, currentQty: number, newQty: number) => {
     if (newQty < 1) {
-      await removeFromCart(item.product._id).unwrap();
+      await removeFromCart(productId).unwrap();
     } else {
-      await updateCartItem({ productId: item.product._id, quantity: newQty }).unwrap();
+      await updateCartItem({ productId, quantity: newQty }).unwrap();
     }
   };
 
@@ -72,7 +71,7 @@ const CartPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-20 text-center">
+      <div className="max-w-xl mx-auto px-4 py-20 text-center bg-slate-950 text-slate-100">
         <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-6 border border-red-500/20">
           <AlertTriangle size={24} />
         </div>
@@ -94,9 +93,9 @@ const CartPage: React.FC = () => {
     );
   }
 
-  if (items.length === 0) {
+  if (totalCartItemsCount === 0 || vendorPackages.length === 0) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-24 text-center">
+      <div className="max-w-xl mx-auto px-4 py-24 text-center bg-slate-950 text-slate-100">
         <div className="w-16 h-16 rounded-full bg-slate-900/60 text-slate-500 flex items-center justify-center mx-auto mb-6 border border-slate-800">
           <ShoppingBag size={28} className="stroke-[1.5]" />
         </div>
@@ -122,7 +121,7 @@ const CartPage: React.FC = () => {
             Your Cart
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Review your items, update stock quantities, and verify pricing before checkout.
+            Checkout products grouped by vendor package. You can check out one package at a time.
           </p>
         </div>
         <Button
@@ -136,178 +135,192 @@ const CartPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Grid Layout: Items list vs. Summary Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Items List */}
-        <div className="lg:col-span-8 space-y-4">
-          {items.map((item) => {
-            const product = item.product;
-            const primaryImage = product.images?.[0]?.url || null;
-            const categoryLabel = CATEGORY_LABELS[product.category as ProductCategory] || product.category;
-
-            return (
-              <div
-                key={product._id}
-                className={`relative flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-900/40 border rounded-xl p-5 gap-6 backdrop-blur-sm transition-colors ${item.isOutOfStock || item.hasInsufficientStock ? 'border-red-500/30 bg-red-950/5' : 'border-slate-850'
-                  }`}
-              >
-                {/* Product details thumbnail & titles */}
-                <div className="flex items-start gap-4 flex-grow">
-                  <div className="w-20 h-20 bg-slate-950/60 border border-slate-800 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
-                    {primaryImage ? (
-                      <img src={primaryImage} alt={product.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package size={24} className="text-slate-650" />
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
-                      {categoryLabel}
-                    </span>
-                    <h3 className="text-sm font-bold text-white leading-snug line-clamp-1">
-                      <Link to={`/p/${generateProductSlug(product.title)}/${product._id}`} className="hover:text-indigo-400 transition-colors">
-                        {product.title}
-                      </Link>
-                    </h3>
-
-                    {/* Stock violations warnings */}
-                    {item.isOutOfStock ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 mt-1 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
-                        <AlertTriangle size={10} /> Out of stock
-                      </span>
-                    ) : item.hasInsufficientStock ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 mt-1 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                        <AlertTriangle size={10} /> Insufficient stock: only {product.stock} available
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-slate-500">Stock: {product.stock} available</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Pricing, Quantity Selector, and Remove button */}
-                <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto border-t sm:border-0 border-slate-800/80 pt-4 sm:pt-0 shrink-0">
-                  {/* Price */}
-                  <div className="flex flex-col text-left sm:text-right">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Unit Price</span>
-                    <span className="text-sm font-semibold text-slate-300 font-mono">
-                      {product.price.amount.toFixed(2)} {product.price.currency}
-                    </span>
-                  </div>
-
-                  {/* Quantity selector */}
-                  <div className="flex items-center space-x-1 border border-slate-850 rounded-lg bg-slate-950 p-0.5">
-                    <button
-                      onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                      disabled={isUpdating}
-                      className="px-2 py-1 text-slate-400 hover:text-white rounded transition-colors"
-                      aria-label="Decrease quantity"
-                    >
-                      <Minus size={10} />
-                    </button>
-                    <span className="w-8 text-center text-xs font-bold text-white font-mono">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => handleQuantityChange(item, item.quantity + 1)}
-                      disabled={isUpdating || item.quantity >= product.stock}
-                      className="px-2 py-1 text-slate-400 hover:text-white rounded transition-colors disabled:opacity-30"
-                      aria-label="Increase quantity"
-                    >
-                      <Plus size={10} />
-                    </button>
-                  </div>
-
-                  {/* Subtotal */}
-                  <div className="flex flex-col text-right">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Subtotal</span>
-                    <span className="text-sm font-bold text-indigo-400 font-mono">
-                      {item.subtotal.toFixed(2)} {product.price.currency}
-                    </span>
-                  </div>
-
-                  {/* Trash remover */}
-                  <button
-                    onClick={() => handleRemoveItem(product._id)}
-                    disabled={isRemoving}
-                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
-                    title="Remove item"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Right Column: Order Summary Panel */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6 space-y-6 backdrop-blur-md">
-            <h2 className="text-lg font-bold text-white border-b border-slate-800/80 pb-3">Order Summary</h2>
-
-            {/* Warning Panel */}
-            {hasWarnings && (
-              <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4 flex gap-3 text-red-400">
-                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-red-500 animate-bounce" />
-                <div className="text-xs space-y-1">
-                  <p className="font-bold text-white">Stock Conflict Warnings Detected</p>
-                  <p className="leading-normal">
-                    Some items in your cart are out of stock or have insufficient quantities. Adjust quantities or remove them to checkout.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Calculations Breakdown */}
-            {totals && (
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Subtotal</span>
-                  <span className="font-mono text-slate-200">${totals.subtotal.toFixed(2)} USD</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Estimated Shipping</span>
-                  <span className="font-mono text-slate-200">${totals.shippingFee.toFixed(2)} USD</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400 border-b border-slate-850 pb-3">
-                  <span>Estimated Tax (3%)</span>
-                  <span className="font-mono text-slate-200">${totals.tax.toFixed(2)} USD</span>
-                </div>
-                <div className="flex items-center justify-between text-base font-extrabold text-white pt-1">
-                  <span>Order Total</span>
-                  <span className="font-mono text-indigo-400">${totals.totalAmount.toFixed(2)} USD</span>
-                </div>
-              </div>
-            )}
-
-            {/* Guarantee Badge */}
-            {/* For now i am considering static shipping charges, otherwise it should be handled dynamically using shippo or else */}
-            <div className="flex gap-2.5 items-start p-3 bg-slate-950/60 border border-slate-850 rounded-lg text-xs text-slate-400">
-              <Info size={14} className="text-indigo-400 shrink-0 mt-0.5" />
-              <p className="leading-normal">
-                Standard flat $5.00 shipping fee applied to all non-empty orders. Real-time pricing computed securely on the server later on.
-              </p>
-            </div>
-
-            {/* Checkout CTA */}
-            <div className="space-y-3">
-              <Button
-                onClick={() => navigate('/checkout')}
-                disabled={hasWarnings || items.length === 0}
-                className="w-full shadow-lg shadow-indigo-500/10"
-                leftIcon={<CreditCard size={16} />}
-              >
-                Proceed to Checkout
-              </Button>
-              <Link to="/products" className="block">
-                <Button variant="outline" className="w-full text-xs text-slate-400 border-slate-850">
-                  Continue Shopping
-                </Button>
-              </Link>
-            </div>
+      {hasWarnings && (
+        <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4 flex gap-3 text-red-400 mb-6">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-red-500 animate-bounce" />
+          <div className="text-xs space-y-1">
+            <p className="font-bold text-white">Stock Warnings Detected</p>
+            <p className="leading-normal">
+              Some items in your cart are out of stock or have insufficient quantities. Adjust quantities before checking out those packages.
+            </p>
           </div>
         </div>
+      )}
+
+      {/* Grid Layout: Vendor Packages List */}
+      <div className="space-y-8">
+        {vendorPackages?.map((pack: any) => {
+          const provider = pack.provider;
+          const items = pack.items || [];
+          const totals = pack.totals;
+
+          return (
+            <div
+              key={provider._id}
+              className="bg-slate-900/40 border border-slate-850 rounded-xl p-6 space-y-6 backdrop-blur-sm"
+            >
+              {/* Vendor Group Header */}
+              <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-white">
+                    Package Vendor: {provider.businessName || provider.name}
+                  </h2>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    Stripe Ready: {provider.isStripeReady ? 'Yes' : 'No'}
+                  </span>
+                </div>
+                
+                {/* Checkout package button */}
+                <Button
+                  onClick={() => navigate(`/checkout?providerId=${provider._id}`)}
+                  disabled={pack.hasWarnings || items.length === 0 || !provider.isStripeReady}
+                  size="sm"
+                  className="shadow-md shadow-indigo-600/10 font-bold"
+                  leftIcon={<CreditCard size={14} />}
+                >
+                  Checkout this Package
+                </Button>
+              </div>
+
+              {/* Grid: package items vs package calculations summary */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left side: Item listings for this package */}
+                <div className="lg:col-span-8 space-y-4">
+                  {items.map((item: any) => {
+                    const product = item.product;
+                    const primaryImage = product.images?.[0]?.url || null;
+                    const categoryLabel = CATEGORY_LABELS[product.category as ProductCategory] || product.category;
+
+                    return (
+                      <div
+                        key={product._id}
+                        className={`relative flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-950/40 border rounded-xl p-4 gap-4 transition-colors ${
+                          item.isOutOfStock || item.hasInsufficientStock ? 'border-red-500/20 bg-red-950/5' : 'border-slate-850'
+                        }`}
+                      >
+                        <div className="flex items-start gap-4 flex-grow">
+                          <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
+                            {primaryImage ? (
+                              <img src={primaryImage} alt={product.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package size={20} className="text-slate-650" />
+                            )}
+                          </div>
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">
+                              {categoryLabel}
+                            </span>
+                            <h3 className="text-xs font-bold text-white leading-snug line-clamp-1 max-w-[200px] sm:max-w-md">
+                              <Link
+                                to={`/p/${generateProductSlug(product.title)}/${product._id}`}
+                                className="hover:text-indigo-400 transition-colors"
+                              >
+                                {product.title}
+                              </Link>
+                            </h3>
+                            
+                            {/* Warnings */}
+                            {item.isOutOfStock ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-red-400 mt-1 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/25">
+                                <AlertTriangle size={8} /> Out of stock
+                              </span>
+                            ) : item.hasInsufficientStock ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-500 mt-1 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/25">
+                                <AlertTriangle size={8} /> Only {product.stock} left
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-500">Stock: {product.stock} available</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Adjust qty, price and trash */}
+                        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t sm:border-0 border-slate-900 pt-3 sm:pt-0 shrink-0 text-xs">
+                          {/* Unit price */}
+                          <div className="flex flex-col text-left sm:text-right">
+                            <span className="text-[9px] text-slate-500 uppercase tracking-wider">Unit</span>
+                            <span className="font-semibold text-slate-300 font-mono">
+                              ${product.price.amount.toFixed(2)}
+                            </span>
+                          </div>
+
+                          {/* Qty Selector */}
+                          <div className="flex items-center space-x-1 border border-slate-850 rounded-lg bg-slate-950 p-0.5">
+                            <button
+                              onClick={() => handleQuantityChange(product._id, item.quantity, item.quantity - 1)}
+                              disabled={isUpdating}
+                              className="px-1.5 py-0.5 text-slate-400 hover:text-white rounded transition-colors"
+                            >
+                              <Minus size={8} />
+                            </button>
+                            <span className="w-6 text-center font-bold text-white font-mono text-[11px]">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => handleQuantityChange(product._id, item.quantity, item.quantity + 1)}
+                              disabled={isUpdating || item.quantity >= product.stock}
+                              className="px-1.5 py-0.5 text-slate-400 hover:text-white rounded transition-colors disabled:opacity-30"
+                            >
+                              <Plus size={8} />
+                            </button>
+                          </div>
+
+                          {/* Subtotal */}
+                          <div className="flex flex-col text-right">
+                            <span className="text-[9px] text-slate-500 uppercase tracking-wider">Subtotal</span>
+                            <span className="font-bold text-indigo-400 font-mono">
+                              ${item.subtotal.toFixed(2)}
+                            </span>
+                          </div>
+
+                          {/* Remove item */}
+                          <button
+                            onClick={() => handleRemoveItem(product._id)}
+                            disabled={isRemoving}
+                            className="p-1.5 text-slate-550 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Right side: Package Totals Summary Breakdown */}
+                <div className="lg:col-span-4 bg-slate-950/30 border border-slate-850 rounded-xl p-4 space-y-4">
+                  <h4 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest font-mono border-b border-slate-900 pb-1.5">
+                    Package Calculations
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>Subtotal</span>
+                      <span className="font-mono text-slate-200">${totals.subtotal.toFixed(2)} USD</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>Package Shipping</span>
+                      <span className="font-mono text-slate-200">${totals.shippingFee.toFixed(2)} USD</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400 border-b border-slate-850 pb-2">
+                      <span>Package Tax (3%)</span>
+                      <span className="font-mono text-slate-200">${totals.tax.toFixed(2)} USD</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm font-extrabold text-white pt-1">
+                      <span>Package Total</span>
+                      <span className="font-mono text-indigo-400">${totals.totalAmount.toFixed(2)} USD</span>
+                    </div>
+                  </div>
+                  {!provider.isStripeReady && (
+                    <div className="text-[9px] text-amber-500 bg-amber-500/5 border border-amber-500/15 p-2 rounded-lg leading-normal flex gap-1.5">
+                      <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                      <span>This vendor has not finished Stripe Connected setup. Checkout is disabled.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

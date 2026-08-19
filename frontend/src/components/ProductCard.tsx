@@ -40,7 +40,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const isLowStock = product.stock > 0 && product.stock < 10;
 
   // Check if product is already in the cart
-  const isAlreadyInCart = cart?.items.some((item) => item.product._id === product._id) || false;
+  const isAlreadyInCart = cart?.vendorPackages?.some((pkg) =>
+    pkg.items?.some((item) => item.product._id === product._id)
+  ) || false;
 
   // Floating button quick cart add trigger (Stops card link navigation click events)
   const handleQuickCartAction = async (e: React.MouseEvent) => {
@@ -103,13 +105,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <button
             onClick={handleQuickCartAction}
             disabled={isProcessing}
-            className={`absolute top-3 right-3 p-2 rounded-full border shadow backdrop-blur-md transition-all duration-300 z-10 ${
-              isProcessing
+            className={`absolute top-3 right-3 p-2 rounded-full border shadow backdrop-blur-md transition-all duration-300 z-10 ${isProcessing
                 ? 'bg-slate-900/85 border-slate-800 text-slate-400'
                 : isAlreadyInCart
-                ? 'bg-red-600/90 hover:bg-red-700 border-red-500/30 text-white hover:scale-105'
-                : 'bg-indigo-600/90 hover:bg-indigo-700 border-indigo-500/30 text-white hover:scale-105'
-            }`}
+                  ? 'bg-red-600/90 hover:bg-red-700 border-red-500/30 text-white hover:scale-105'
+                  : 'bg-indigo-600/90 hover:bg-indigo-700 border-indigo-500/30 text-white hover:scale-105'
+              }`}
             title={isAlreadyInCart ? 'Remove from Cart' : 'Quick Add to Cart'}
           >
             {isProcessing ? (

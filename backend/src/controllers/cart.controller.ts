@@ -7,67 +7,98 @@ import { ApiResponse } from '../utils/ApiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
 
 /**
- * Helper to dynamically recalculate cart subtotals and check real-time stock warnings.
- * Divides cents integers by 100 on response serialization for standard decimal output.
+ * Helper to dynamically group cart items into vendor-specific packages.
+ * Calculates totals (shipping fee & tax) individually per vendor package.
  */
 const serializeCart = (cart: any) => {
-  let subtotalCents = 0;
-  const items = cart.items
-    .map((item: any) => {
-      const product = item.product;
-      // Gracefully filter out or ignore soft-deleted / missing products
-      if (!product || product.isDeleted) {
-        return null;
-      }
+  const itemsByProvider: Record<string, { provider: any; items: any[] }> = {};
 
-      const priceCents = product.price.amount;
-      const itemSubtotalCents = item.quantity * priceCents;
-      subtotalCents += itemSubtotalCents;
+  for (const item of cart.items) {
+    const product = item.product;
+    if (!product || product.isDeleted) {
+      continue;
+    }
 
-      // Real-time stock status assessments
-      const isOutOfStock = product.stock === 0;
-      const hasInsufficientStock = item.quantity > product.stock;
+    const provider = product.provider;
+    if (!provider) {
+      continue;
+    }
+    const providerId = provider._id.toString();
 
-      return {
-        product: {
-          _id: product._id,
-          title: product.title,
-          description: product.description,
-          price: {
-            amount: priceCents / 100, // Return standard decimal format
-            currency: product.price.currency,
-          },
-          stock: product.stock,
-          category: product.category,
-          images: product.images,
-          isDeleted: product.isDeleted,
+    if (!itemsByProvider[providerId]) {
+      itemsByProvider[providerId] = {
+        provider: {
+          _id: provider._id,
+          name: provider.name,
+          businessName: provider.businessName,
+          stripeAccountId: provider.stripeAccountId,
+          isStripeReady: provider.isStripeReady,
         },
-        quantity: item.quantity,
-        subtotal: itemSubtotalCents / 100,
-        isOutOfStock,
-        hasInsufficientStock,
+        items: [],
       };
-    })
-    .filter(Boolean);
+    }
 
-  // Dynamic pricing calculations (Flat $5.00 shipping fee and 3% tax)
-  const shippingFeeCents = subtotalCents > 0 ? 500 : 0;
-  const taxRate = 0.03;
-  const taxCents = Math.round(subtotalCents * taxRate);
-  const totalAmountCents = subtotalCents + shippingFeeCents + taxCents;
+    const priceCents = product.price.amount;
+    const itemSubtotalCents = item.quantity * priceCents;
+    const isOutOfStock = product.stock === 0;
+    const hasInsufficientStock = item.quantity > product.stock;
+
+    itemsByProvider[providerId].items.push({
+      product: {
+        _id: product._id,
+        title: product.title,
+        description: product.description,
+        price: {
+          amount: priceCents / 100, // Return standard decimal format (dollars)
+          currency: product.price.currency,
+        },
+        stock: product.stock,
+        category: product.category,
+        images: product.images,
+        isDeleted: product.isDeleted,
+      },
+      quantity: item.quantity,
+      subtotal: itemSubtotalCents / 100,
+      isOutOfStock,
+      hasInsufficientStock,
+    });
+  }
+
+  const vendorPackages = Object.values(itemsByProvider).map(({ provider, items }) => {
+    const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const shippingFee = subtotal > 0 ? 5.0 : 0;
+    const tax = Math.round(subtotal * 0.03 * 100) / 100;
+    const totalAmount = Math.round((subtotal + shippingFee + tax) * 100) / 100;
+    const hasWarnings = items.some((item) => item.isOutOfStock || item.hasInsufficientStock);
+
+    return {
+      provider,
+      items,
+      totals: {
+        subtotal,
+        shippingFee,
+        tax,
+        totalAmount,
+      },
+      hasWarnings,
+    };
+  });
 
   return {
     _id: cart._id,
     user: cart.user,
-    items,
-    totals: {
-      subtotal: subtotalCents / 100,
-      shippingFee: shippingFeeCents / 100,
-      tax: taxCents / 100,
-      totalAmount: totalAmountCents / 100,
-    },
-    hasWarnings: items.some((item: any) => item.isOutOfStock || item.hasInsufficientStock),
+    vendorPackages,
+    totalCartItemsCount: cart.items.reduce((sum: number, item: any) => sum + (item.product?.isDeleted ? 0 : item.quantity), 0),
+    hasWarnings: vendorPackages.some((vp) => vp.hasWarnings),
   };
+};
+
+// Utility to populate cart with products and their providers
+const populateCart = (query: any) => {
+  return query.populate({
+    path: 'items.product',
+    populate: { path: 'provider', select: 'name businessName stripeAccountId isStripeReady' },
+  });
 };
 
 /**
@@ -79,10 +110,12 @@ export const getCart = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(403, 'Only customers can view or manage shopping carts');
   }
 
-  let cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
+  let cart = await populateCart(Cart.findOne({ user: req.user._id }));
 
   if (!cart) {
     cart = await Cart.create({ user: req.user._id, items: [] });
+    // Reload to apply population
+    cart = await populateCart(Cart.findById(cart._id));
   }
 
   res.status(200).json(new ApiResponse(200, serializeCart(cart), 'Cart retrieved successfully'));
@@ -147,7 +180,7 @@ export const addToCart = asyncHandler(async (req: Request, res: Response) => {
   }
 
   await cart.save();
-  const populatedCart = await cart.populate('items.product');
+  const populatedCart = await populateCart(Cart.findById(cart._id));
 
   res.status(200).json(new ApiResponse(200, serializeCart(populatedCart), 'Item added to cart successfully'));
 });
@@ -202,7 +235,7 @@ export const updateCartItem = asyncHandler(async (req: Request, res: Response) =
   }
 
   await cart.save();
-  const populatedCart = await cart.populate('items.product');
+  const populatedCart = await populateCart(Cart.findById(cart._id));
 
   res.status(200).json(new ApiResponse(200, serializeCart(populatedCart), 'Cart item updated successfully'));
 });
@@ -229,7 +262,7 @@ export const removeFromCart = asyncHandler(async (req: Request, res: Response) =
   cart.items = cart.items.filter((item) => item.product.toString() !== productId);
 
   await cart.save();
-  const populatedCart = await cart.populate('items.product');
+  const populatedCart = await populateCart(Cart.findById(cart._id));
 
   res.status(200).json(new ApiResponse(200, serializeCart(populatedCart), 'Item removed from cart successfully'));
 });

@@ -1,12 +1,16 @@
 import React from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle2, ShoppingBag, FileText, ArrowRight } from 'lucide-react';
+import { useVerifyCheckoutSuccessQuery } from '../api/paymentApi';
 import Button from '../components/common/Button';
 
 const CheckoutSuccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId') || '';
   const paymentIntentId = searchParams.get('payment_intent') || '';
+
+  // Query success verification fallback on mount to clear purchased cart items instantly
+  useVerifyCheckoutSuccessQuery(orderId, { skip: !orderId });
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-20 text-center min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center">
@@ -48,9 +52,9 @@ const CheckoutSuccessPage: React.FC = () => {
             Continue Shopping
           </Button>
         </Link>
-        <Link to="/dashboard" className="w-full">
+        <Link to="/orders" className="w-full">
           <Button variant="outline" className="w-full text-slate-300 border-slate-850" rightIcon={<ArrowRight size={14} />}>
-            Go to Dashboard
+            View My Orders
           </Button>
         </Link>
       </div>

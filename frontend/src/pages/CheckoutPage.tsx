@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useGetCartQuery } from '../api/cartApi';
@@ -22,9 +22,10 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 
 // --- UNIFIED CHECKOUT FORM (ADDRESS + CARD IN ONE STEP) ---
 interface UnifiedFormProps {
   totalAmountCents: number;
+  providerId: string;
 }
 
-const UnifiedCheckoutForm: React.FC<UnifiedFormProps> = () => {
+const UnifiedCheckoutForm: React.FC<UnifiedFormProps> = ({ totalAmountCents, providerId }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [createPaymentIntent, { isLoading: isProcessing }] = useCreatePaymentIntentMutation();
@@ -42,7 +43,7 @@ const UnifiedCheckoutForm: React.FC<UnifiedFormProps> = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || !providerId) {
       return;
     }
 
@@ -68,8 +69,8 @@ const UnifiedCheckoutForm: React.FC<UnifiedFormProps> = () => {
     }
 
     try {
-      // 3. Request PaymentIntent initialization from the backend
-      const response = await createPaymentIntent({ shippingAddress }).unwrap();
+      // 3. Request PaymentIntent initialization from the backend for the specific vendor package
+      const response = await createPaymentIntent({ shippingAddress, providerId }).unwrap();
       const { clientSecret, orderId } = response;
 
       // 4. Confirm Stripe payment using elements and the clientSecret
@@ -82,96 +83,15 @@ const UnifiedCheckoutForm: React.FC<UnifiedFormProps> = () => {
       });
 
       if (error) {
-        setErrorMessage(error.message || 'An unexpected payment error occurred.');
+        setErrorMessage(error.message || 'Payment confirmation failed.');
       }
-    } catch (err: any) {
-      setErrorMessage(
-        err?.data?.message || err?.message || 'Checkout process failed. Please try again.'
-      );
+    } catch (apiErr: any) {
+      setErrorMessage(apiErr?.data?.message || apiErr?.message || 'Transaction initialization failed.');
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Shipping Address Details */}
-      <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-xl space-y-4 backdrop-blur-sm">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-3 mb-4">
-          <MapPin size={16} className="text-indigo-400" /> Shipping Address
-        </h3>
-        <div className="grid grid-cols-1 gap-4">
-          <div>
-            <label className="block text-xs text-slate-450 font-bold uppercase mb-1.5">Street Address*</label>
-            <input
-              type="text"
-              required
-              disabled={isProcessing}
-              value={shippingAddress.street}
-              onChange={(e) => setShippingAddress((prev) => ({ ...prev, street: e.target.value }))}
-              placeholder="e.g. 123 Main St"
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-450 font-bold uppercase mb-1.5">Area / Landmark*</label>
-            <input
-              type="text"
-              required
-              disabled={isProcessing}
-              value={shippingAddress.area}
-              onChange={(e) => setShippingAddress((prev) => ({ ...prev, area: e.target.value }))}
-              placeholder="e.g. Apartment, Suite, Floor"
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-855 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs text-slate-455 font-bold uppercase mb-1.5">City*</label>
-              <input
-                type="text"
-                required
-                disabled={isProcessing}
-                value={shippingAddress.city}
-                onChange={(e) => setShippingAddress((prev) => ({ ...prev, city: e.target.value }))}
-                placeholder="e.g. San Jose"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-455 font-bold uppercase mb-1.5">State*</label>
-              <input
-                type="text"
-                required
-                disabled={isProcessing}
-                value={shippingAddress.state}
-                onChange={(e) => setShippingAddress((prev) => ({ ...prev, state: e.target.value }))}
-                placeholder="e.g. CA"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-455 font-bold uppercase mb-1.5">Pincode / ZIP*</label>
-              <input
-                type="text"
-                required
-                disabled={isProcessing}
-                value={shippingAddress.pincode}
-                onChange={(e) => setShippingAddress((prev) => ({ ...prev, pincode: e.target.value }))}
-                placeholder="e.g. 95101"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Card Element Details */}
-      <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-xl space-y-4 backdrop-blur-sm">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-3 mb-4">
-          <CreditCard size={16} className="text-indigo-400" /> Card Details
-        </h3>
-        <PaymentElement />
-      </div>
-
       {errorMessage && (
         <div className="bg-red-500/5 border border-red-500/20 text-red-400 p-4 rounded-lg text-xs flex gap-2">
           <AlertTriangle size={16} className="shrink-0 text-red-500" />
@@ -179,37 +99,132 @@ const UnifiedCheckoutForm: React.FC<UnifiedFormProps> = () => {
         </div>
       )}
 
+      {/* Address Form Card */}
+      <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6 space-y-4 backdrop-blur-sm">
+        <h2 className="text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+          <MapPin size={18} className="text-indigo-400" /> Delivery Shipping Address
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="sm:col-span-2 space-y-1.5 text-left">
+            <label className="text-slate-400 font-semibold" htmlFor="street">Street Address</label>
+            <input
+              type="text"
+              id="street"
+              required
+              className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              placeholder="e.g. 123 Main St, Apartment 4B"
+              value={shippingAddress.street}
+              onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5 text-left">
+            <label className="text-slate-400 font-semibold" htmlFor="area">Locality / Area</label>
+            <input
+              type="text"
+              id="area"
+              required
+              className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              placeholder="e.g. Downtown / Sector 15"
+              value={shippingAddress.area}
+              onChange={(e) => setShippingAddress({ ...shippingAddress, area: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5 text-left">
+            <label className="text-slate-400 font-semibold" htmlFor="city">City</label>
+            <input
+              type="text"
+              id="city"
+              required
+              className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              placeholder="e.g. San Francisco"
+              value={shippingAddress.city}
+              onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5 text-left">
+            <label className="text-slate-400 font-semibold" htmlFor="state">State / Province</label>
+            <input
+              type="text"
+              id="state"
+              required
+              className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              placeholder="e.g. California"
+              value={shippingAddress.state}
+              onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5 text-left">
+            <label className="text-slate-400 font-semibold" htmlFor="pincode">ZIP / Postal Code</label>
+            <input
+              type="text"
+              id="pincode"
+              required
+              className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+              placeholder="e.g. 94103"
+              value={shippingAddress.pincode}
+              onChange={(e) => setShippingAddress({ ...shippingAddress, pincode: e.target.value })}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Stripe Payment Card */}
+      <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6 space-y-4 backdrop-blur-sm">
+        <h2 className="text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+          <CreditCard size={18} className="text-indigo-400" /> Credit / Debit Card
+        </h2>
+
+        {/* Renders card input fields inline */}
+        <div className="p-3 bg-slate-950 rounded-lg border border-slate-850">
+          <PaymentElement />
+        </div>
+
+        <div className="flex gap-2 items-center text-[10px] text-slate-500 font-mono">
+          <Lock size={12} className="text-indigo-500" />
+          <span>Cryptographic 3D Secure checkout powered by Stripe Connect escrow.</span>
+        </div>
+      </div>
+
+      {/* Main Checkout CTA Action */}
       <Button
         type="submit"
-        disabled={!stripe || isProcessing}
-        className="w-full shadow-lg shadow-indigo-500/20 py-3 text-base font-extrabold"
-        leftIcon={isProcessing ? <Spinner size="sm" /> : <Lock size={16} />}
+        disabled={isProcessing || !stripe || !elements}
+        className="w-full py-3.5 text-sm font-bold shadow-lg shadow-indigo-500/10"
+        leftIcon={isProcessing ? <Spinner size="sm" /> : <Lock size={14} />}
       >
-        {isProcessing ? 'Processing Payment...' : 'Pay Securely Now'}
+        {isProcessing ? 'Authorizing Payout Hold...' : `Pay Securely Now ($${(totalAmountCents / 100).toFixed(2)})`}
       </Button>
     </form>
   );
 };
 
-// --- MAIN CHECKOUT PAGE COMPONENT ---
+// --- CHECKOUT MAIN CONTROLLER PAGE ---
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const providerId = searchParams.get('providerId');
 
-  // 1. Fetch populated customer cart
+  // Fetch cart grouped by vendor packages
   const { data: cart, isLoading: isLoadingCart, error: cartError } = useGetCartQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
 
-  const items = cart?.items || [];
-  const totals = cart?.totals;
-  const hasWarnings = cart?.hasWarnings || false;
+  const vendorPackage = cart?.vendorPackages?.find((pack: any) => pack.provider._id === providerId);
+  const items = vendorPackage?.items || [];
+  const totals = vendorPackage?.totals;
+  const hasWarnings = vendorPackage?.hasWarnings || false;
 
-  // Redirection guard if cart is empty or has issues
   useEffect(() => {
-    if (cart && (items.length === 0 || hasWarnings)) {
+    if (!providerId) {
+      navigate('/cart');
+      return;
+    }
+
+    if (cart && !vendorPackage && !isLoadingCart) {
       navigate('/cart');
     }
-  }, [cart, items, hasWarnings, navigate]);
+  }, [cart, vendorPackage, providerId, isLoadingCart, navigate]);
 
   if (isLoadingCart) {
     return (
@@ -220,9 +235,9 @@ const CheckoutPage: React.FC = () => {
     );
   }
 
-  if (cartError || !cart) {
+  if (cartError || !cart || !vendorPackage || !totals) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-20 text-center">
+      <div className="max-w-xl mx-auto px-4 py-20 text-center bg-slate-950 text-slate-100">
         <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-6 border border-red-500/20">
           <AlertTriangle size={24} />
         </div>
@@ -239,11 +254,7 @@ const CheckoutPage: React.FC = () => {
     );
   }
 
-  // Calculate dynamic checkout totals for deferred element creation
-  const subtotal = totals?.subtotal || 0;
-  const shippingFee = totals?.shippingFee || 0;
-  const tax = subtotal * 0.03;
-  const totalAmountCents = Math.round((subtotal + shippingFee + tax) * 100);
+  const totalAmountCents = Math.round(totals.totalAmount * 100);
 
   const elementsOptions = {
     mode: 'payment' as const,
@@ -265,7 +276,7 @@ const CheckoutPage: React.FC = () => {
             Checkout
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Complete shipping and payment details in a single step securely powered by Stripe.
+            Pay for products from {vendorPackage.provider.businessName || vendorPackage.provider.name} in a single step.
           </p>
         </div>
       </div>
@@ -273,9 +284,9 @@ const CheckoutPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Checkout Forms */}
         <div className="lg:col-span-7">
-          {totalAmountCents > 0 && (
+          {totalAmountCents > 0 && providerId && (
             <Elements stripe={stripePromise} options={elementsOptions}>
-              <UnifiedCheckoutForm totalAmountCents={totalAmountCents} />
+              <UnifiedCheckoutForm totalAmountCents={totalAmountCents} providerId={providerId} />
             </Elements>
           )}
         </div>
@@ -287,7 +298,7 @@ const CheckoutPage: React.FC = () => {
 
             {/* Cart products breakdown list */}
             <div className="max-h-60 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
-              {items.map((item) => {
+              {items?.map((item: any) => {
                 const product = item.product;
                 const primaryImage = product.images?.[0]?.url || null;
                 const categoryLabel = CATEGORY_LABELS[product.category as ProductCategory] || product.category;
@@ -299,7 +310,7 @@ const CheckoutPage: React.FC = () => {
                         {primaryImage ? (
                           <img src={primaryImage} alt={product.title} className="w-full h-full object-cover" />
                         ) : (
-                          <Package size={16} className="text-slate-600" />
+                          <Package size={16} className="text-slate-650" />
                         )}
                       </div>
                       <div className="text-left">
@@ -313,39 +324,36 @@ const CheckoutPage: React.FC = () => {
                       </div>
                     </div>
                     <span className="text-xs font-bold text-indigo-400 font-mono shrink-0">
-                      ${(item.product.price.amount * item.quantity).toFixed(2)}
+                      ${(product.price.amount * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 );
               })}
             </div>
 
-            {/* Calculations Breakdown (Estimated Tax: 3%) */}
-            {totals && (
-              <div className="space-y-3 text-xs border-t border-slate-800/80 pt-4">
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Subtotal</span>
-                  <span className="font-mono text-slate-200">${totals.subtotal.toFixed(2)} USD</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Shipping Fee</span>
-                  <span className="font-mono text-slate-200">${totals.shippingFee.toFixed(2)} USD</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400 border-b border-slate-850 pb-3">
-                  {/* Estimating 3% tax to match checkout calculations */}
-                  <span>Estimated Tax (3%)</span>
-                  <span className="font-mono text-slate-200">
-                    ${(totals.subtotal * 0.03).toFixed(2)} USD
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm font-extrabold text-white pt-1">
-                  <span>Order Total</span>
-                  <span className="font-mono text-indigo-400">
-                    ${(totals.subtotal + totals.shippingFee + totals.subtotal * 0.03).toFixed(2)} USD
-                  </span>
-                </div>
+            {/* Calculations Breakdown */}
+            <div className="space-y-3 text-xs border-t border-slate-800/80 pt-4">
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Subtotal</span>
+                <span className="font-mono text-slate-200">${totals.subtotal.toFixed(2)} USD</span>
               </div>
-            )}
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Shipping Fee</span>
+                <span className="font-mono text-slate-200">${totals.shippingFee.toFixed(2)} USD</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-400 border-b border-slate-850 pb-3">
+                <span>Estimated Tax (3%)</span>
+                <span className="font-mono text-slate-200">
+                  ${totals.tax.toFixed(2)} USD
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm font-extrabold text-white pt-1">
+                <span>Order Total</span>
+                <span className="font-mono text-indigo-400">
+                  ${totals.totalAmount.toFixed(2)} USD
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

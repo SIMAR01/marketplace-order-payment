@@ -29,11 +29,24 @@ export interface ICartTotals {
   totalAmount: number;
 }
 
+export interface IVendorPackage {
+  provider: {
+    _id: string;
+    name: string;
+    businessName?: string;
+    stripeAccountId?: string;
+    isStripeReady: boolean;
+  };
+  items: ICartItem[];
+  totals: ICartTotals;
+  hasWarnings: boolean;
+}
+
 export interface ICartResponse {
   _id: string;
   user: string;
-  items: ICartItem[];
-  totals: ICartTotals;
+  vendorPackages: IVendorPackage[];
+  totalCartItemsCount: number;
   hasWarnings: boolean;
 }
 

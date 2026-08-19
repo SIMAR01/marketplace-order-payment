@@ -94,7 +94,9 @@ const ProductDetailPage: React.FC = () => {
   const isLowStock = stock > 0 && stock < 10;
 
   // Check if product is already in active customer cart
-  const cartItem = cart?.items.find((item) => item.product._id === id);
+  const cartItem = cart?.vendorPackages
+    ?.flatMap((pkg) => pkg.items || [])
+    ?.find((item) => item.product._id === id);
   const isAlreadyInCart = !!cartItem;
 
   // 4. Canonical SEO Slug Redirect check
@@ -272,8 +274,8 @@ const ProductDetailPage: React.FC = () => {
                   key={i}
                   onClick={() => setCurrentImageIndex(i)}
                   className={`relative w-20 h-20 rounded-lg overflow-hidden border bg-slate-900 shrink-0 transition-all duration-200 ${currentImageIndex === i
-                      ? 'border-indigo-500 ring-2 ring-indigo-500/20'
-                      : 'border-slate-800 hover:border-slate-700'
+                    ? 'border-indigo-500 ring-2 ring-indigo-500/20'
+                    : 'border-slate-800 hover:border-slate-700'
                     }`}
                 >
                   <img src={img.url} alt={`Thumbnail ${i}`} className="w-full h-full object-cover" />

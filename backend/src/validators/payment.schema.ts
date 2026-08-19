@@ -8,5 +8,6 @@ export const createPaymentIntentSchema = z.object({
     state: z.string({ required_error: 'State is required' }).min(1, 'State cannot be empty').trim(),
     pincode: z.string({ required_error: 'Pincode is required' }).min(1, 'Pincode cannot be empty').trim(),
   }),
+  providerId: z.string({ required_error: 'Provider ID is required' }).regex(/^[0-9a-fA-F]{24}$/, 'Invalid Provider ID format'),
   idempotencyKey: z.string().optional(),
 });

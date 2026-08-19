@@ -6,6 +6,8 @@ import authRouter from './routes/auth.routes';
 import productRouter from './routes/product.routes';
 import cartRouter from './routes/cart.routes';
 import paymentRouter from './routes/payment.routes';
+import orderRouter from './routes/order.routes';
+import cronRouter from './routes/cron.routes';
 import stripeConnectRouter from './routes/providerStripe.routes';
 import { errorHandler } from './middleware/error.middleware';
 
@@ -31,6 +33,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/products', productRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/payments', paymentRouter);
+app.use('/api/orders', orderRouter);
+app.use('/api/cron', cronRouter);
 app.use('/api/stripe', stripeConnectRouter);
 
 // Public health endpoint

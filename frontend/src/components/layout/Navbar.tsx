@@ -21,7 +21,7 @@ const Navbar: React.FC = () => {
     skip: !isCustomer,
   });
 
-  const cartItemsCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const cartItemsCount = cart?.totalCartItemsCount || 0;
 
   const handleLogout = async () => {
     setIsMobileMenuOpen(false);
@@ -74,6 +74,18 @@ const Navbar: React.FC = () => {
                   + Add Product
                 </NavLink>
               </>
+            )}
+
+            {isAuthenticated && (user?.role === 'CUSTOMER' || user?.role === 'PROVIDER') && (
+              <NavLink to="/orders" className={getLinkClass}>
+                My Orders
+              </NavLink>
+            )}
+
+            {isAuthenticated && user?.role === 'ADMIN' && (
+              <NavLink to="/admin" className={getLinkClass}>
+                Admin Panel
+              </NavLink>
             )}
 
             {/* Shopping Cart desktop icon badge */}
@@ -194,6 +206,26 @@ const Navbar: React.FC = () => {
                 + Add Product
               </NavLink>
             </>
+          )}
+
+          {isAuthenticated && (user?.role === 'CUSTOMER' || user?.role === 'PROVIDER') && (
+            <NavLink
+              to="/orders"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-900/60 transition-colors"
+            >
+              My Orders
+            </NavLink>
+          )}
+
+          {isAuthenticated && user?.role === 'ADMIN' && (
+            <NavLink
+              to="/admin"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-900/60 transition-colors"
+            >
+              Admin Panel
+            </NavLink>
           )}
 
           {isCustomer && (
