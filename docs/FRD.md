@@ -1,5 +1,9 @@
 # Functional Requirements Document (FRD) - Multi-Vendor Escrow Marketplace
 
+* **Repository:** `git@github.com:SIMAR01/marketplace-order-payment.git`
+* **Latest Branch:** `staging`
+
+
 ## 1. System Overview & Multi-Vendor Architecture
 
 The Multi-Vendor Escrow Marketplace is a distributed e-commerce platform that allows **Customers** to buy products from multiple independent **Providers** (merchants). The platform mediates trust using a single-vendor checkout flow, holding payments in **Stripe-managed Escrow** until successful delivery is verified, or automatically releasing them via a background **Cron** job.

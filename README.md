@@ -16,6 +16,9 @@ The architecture is split into a dockerized backend stack and a local frontend d
 * **Stripe Connect** (Express onboarding, PaymentIntents, Escrow Holds, Direct Transfers, and Webhooks)
 * **Zod** (strict runtime request body validations)
 
+### Latest Branch
+staging
+
 ### Frontend Tech Stack
 * **React** (built with Vite & TypeScript)
 * **Tailwind CSS** (for rich UI layout and styling)
@@ -24,7 +27,23 @@ The architecture is split into a dockerized backend stack and a local frontend d
 
 ---
 
-## 2. Prerequisites
+## 2. Clone & Branch Setup
+
+Clone the repository and switch to the active development branch:
+```bash
+# Clone the repository via SSH
+git clone git@github.com:SIMAR01/marketplace-order-payment.git
+
+# Navigate to the workspace root
+cd marketplace-order-payment
+
+# Switch to the staging branch
+git checkout staging
+```
+
+---
+
+## 3. Prerequisites
 
 Ensure you have the following installed locally:
 * **Node.js** (v18 or higher)

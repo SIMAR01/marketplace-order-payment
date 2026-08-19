@@ -1,5 +1,9 @@
 # REST API Reference - Multi-Vendor Escrow Marketplace
 
+* **Repository:** `git@github.com:SIMAR01/marketplace-order-payment.git`
+* **Latest Branch:** `staging`
+
+
 * **Base URL**: `http://localhost:5000/api`
 * **JSON format**: All request bodies must be JSON, and responses return JSON format.
 * **Response Status Codes**: All API responses explicitly return a `statusCode` field in the JSON body.
