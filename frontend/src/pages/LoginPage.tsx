@@ -1,24 +1,25 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import AuthLayout from '../components/auth/AuthLayout';
+import LoginForm from '../components/auth/LoginForm';
 
 const LoginPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-6">
-      <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl text-center">
-        <h1 className="text-2xl font-extrabold text-white mb-4">
-          Login
-        </h1>
-        <p className="text-sm text-slate-400 mb-6">
-          Authentication will be implemented later.
-        </p>
-        <Link 
-          to="/" 
-          className="inline-flex justify-center items-center px-4 py-2 text-sm font-semibold text-slate-900 bg-slate-400 hover:bg-slate-300 rounded-lg transition duration-200"
+    <AuthLayout
+      title="Welcome Back"
+      subtitle="Sign in to manage your orders, invoices, and payments"
+    >
+      <LoginForm />
+      <div className="mt-6 text-center text-xs">
+        <span className="text-slate-400">New to the marketplace? </span>
+        <Link
+          to="/register"
+          className="font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
         >
-          Back to Home
+          Create an Account
         </Link>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 
